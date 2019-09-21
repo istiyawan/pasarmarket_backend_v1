@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	_ "github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -38,6 +39,15 @@ func Connect() (*sql.DB, error) {
 	return db, nil
 }
 
+func HashAndSalt(password []byte) string {
+	hash, err := bcrypt.GenerateFromPassword(password, bcrypt.MinCost)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return string(hash)
+}
+
 func HandleAddUsers(w http.ResponseWriter, r *http.Request) {
 
 	db, err := Connect()
@@ -63,7 +73,9 @@ func HandleAddUsers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = db.Exec("insert into tm_users values($1,$2,$3,$4,$5,$6)", payload.ID, payload.Username, payload.Useremail, payload.Password, payload.Createddate, payload.Updateddate)
+		hashPassword := hashAndSalt(payload.Password)
+
+		_, err = db.Exec("insert into tm_users values($1,$2,$3,$4,$5,$6)", payload.ID, payload.Username, payload.Useremail, hashPassword, payload.Createddate, payload.Updateddate)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -78,8 +90,62 @@ func HandleAddUsers(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func HandleListUserById(w http.ResponseWriter, r *http.Request) {
+	db, err := Connect()
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	defer db.Close()
+
+	if r.Method == "GET" {
+
+		decoder := json.NewDecoder(r.Body)
+		payload := struct {
+			ID int `json:"id"`
+		}{}
+
+		if err := decoder.Decode(&payload); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var result []Users
+		rows, err := db.Query("select id, user_name, user_email,password, created_date, updated_date from tm_users where id = $1", payload.ID)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		for rows.Next() {
+			var each = Users{}
+			var err = rows.Scan(&each.ID, &each.Username, &each.Useremail, &each.Password, &each.Createddate, &each.Updateddate)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+
+			result = append(result, each)
+		}
+
+		if r.Method == "GET" {
+			var result, err = json.Marshal(result)
+
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+
+			w.Write(result)
+			return
+		}
+
+		http.Error(w, "", http.StatusBadRequest)
+	}
+}
+
 func main() {
 	http.HandleFunc("/AddUsers", HandleAddUsers)
+	http.HandleFunc("/ListUsersById", HandleListUserById)
 	fmt.Println("Server mulai di port 8080")
 	http.ListenAndServe(":8080", nil)
 }
