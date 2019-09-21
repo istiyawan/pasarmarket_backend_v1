@@ -63,7 +63,7 @@ func HandleAddUsers(w http.ResponseWriter, r *http.Request) {
 			ID          int    `json:"id"`
 			Username    string `json:"username"`
 			Useremail   string `json:"useremail"`
-			Password    string `json:"password"`
+			Password    []byte `json:"password"`
 			Createddate string `json:"createddate"`
 			Updateddate string `json:"updateddate"`
 		}{}
@@ -73,7 +73,7 @@ func HandleAddUsers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		hashPassword := hashAndSalt(payload.Password)
+		hashPassword := HashAndSalt(payload.Password)
 
 		_, err = db.Exec("insert into tm_users values($1,$2,$3,$4,$5,$6)", payload.ID, payload.Username, payload.Useremail, hashPassword, payload.Createddate, payload.Updateddate)
 		if err != nil {
@@ -87,6 +87,53 @@ func HandleAddUsers(w http.ResponseWriter, r *http.Request) {
 
 	}
 	log.Print("Insert data to database")
+
+}
+
+func HandleListUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Content-Type", "application/json")
+
+	db, err := Connect()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	defer db.Close()
+
+	rows, err := db.Query("select id, user_name, user_email,created_date, password, updated_date from tm_users")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	defer db.Close()
+
+	var result []Users
+	for rows.Next() {
+		var each = Users{}
+		var err = rows.Scan(&each.ID, &each.Username, &each.Useremail, &each.Password, &each.Createddate, &each.Updateddate)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		result = append(result, each)
+	}
+
+	if r.Method == "GET" {
+		var result, err = json.Marshal(result)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		w.Write(result)
+		return
+	}
+
+	http.Error(w, "", http.StatusBadRequest)
 
 }
 
@@ -145,6 +192,7 @@ func HandleListUserById(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/AddUsers", HandleAddUsers)
+	http.HandleFunc("/ListUsers", HandleListUsers)
 	http.HandleFunc("/ListUsersById", HandleListUserById)
 	fmt.Println("Server mulai di port 8080")
 	http.ListenAndServe(":8080", nil)
