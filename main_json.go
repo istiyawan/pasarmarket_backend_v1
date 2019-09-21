@@ -1,10 +1,21 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"time"
+
+	_ "github.com/lib/pq"
+)
+
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = "salam"
+	dbname   = "db_pasarmarket"
 )
 
 type Users struct {
@@ -12,25 +23,63 @@ type Users struct {
 	Username    string
 	Useremail   string
 	Password    string
-	Createddate time.time
-	Updateddate time.time
+	Createddate string
+	Updateddate string
 }
 
-func HandleListUsers(w http.ResponseWriter, r *http.Request) {
-	users := Users{}
-	err := json.NewDecoder(r.Body).Decode(users)
+func Connect() (*sql.DB, error) {
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+"password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+
+	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	users.Createddate = time.Now().Local()
+	return db, nil
+}
 
-	userJson, err := json.Marshal(users)
+func HandleAddUsers(w http.ResponseWriter, r *http.Request) {
+
+	db, err := Connect()
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	defer db.Close()
+
+	if r.Method == "POST" {
+		decoder := json.NewDecoder(r.Body)
+		payload := struct {
+			ID          int    `json:"id"`
+			Username    string `json:"username"`
+			Useremail   string `json:"useremail"`
+			Password    string `json:"password"`
+			Createddate string `json:"createddate"`
+			Updateddate string `json:"updateddate"`
+		}{}
+
+		if err := decoder.Decode(&payload); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		_, err = db.Exec("insert into tm_users values($1,$2,$3,$4,$5,$6)", payload.ID, payload.Username, payload.Useremail, payload.Password, payload.Createddate, payload.Updateddate)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		if err != nil {
+			log.Print(err)
+		}
+
+	}
+	log.Print("Insert data to database")
 
 }
 
 func main() {
-	http.HandleFunc("/ListUsers", HandleListUsers)
+	http.HandleFunc("/AddUsers", HandleAddUsers)
 	fmt.Println("Server mulai di port 8080")
 	http.ListenAndServe(":8080", nil)
 }
