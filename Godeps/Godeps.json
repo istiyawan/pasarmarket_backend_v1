@@ -1,0 +1,30 @@
+{
+	"ImportPath": "pasarmarket_backend_v1",
+	"GoVersion": "go1.13",
+	"GodepVersion": "v80",
+	"Deps": [
+		{
+			"ImportPath": "github.com/lib/pq",
+			"Comment": "v1.2.0-12-g931b5ae",
+			"Rev": "931b5ae4c24e6810c8c82ab4734904de3df1c3dc"
+		},
+		{
+			"ImportPath": "github.com/lib/pq/oid",
+			"Comment": "v1.2.0-12-g931b5ae",
+			"Rev": "931b5ae4c24e6810c8c82ab4734904de3df1c3dc"
+		},
+		{
+			"ImportPath": "github.com/lib/pq/scram",
+			"Comment": "v1.2.0-12-g931b5ae",
+			"Rev": "931b5ae4c24e6810c8c82ab4734904de3df1c3dc"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/bcrypt",
+			"Rev": "a931864efbbc20d9c7c1e176416d7a359d4cd582"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/blowfish",
+			"Rev": "a931864efbbc20d9c7c1e176416d7a359d4cd582"
+		}
+	]
+}

@@ -190,10 +190,43 @@ func HandleListUserById(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func HandleDeleteUsers(w http.ResponseWriter, r *http.Request) {
+	db, err := Connect()
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	defer db.Close()
+
+	if r.Method == "GET" {
+
+		decoder := json.NewDecoder(r.Body)
+		payload := struct {
+			ID int `json:"id"`
+		}{}
+
+		if err := decoder.Decode(&payload); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// var result []Users
+		_, err := db.Query("delete from tm_users where id = $1", payload.ID)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		http.Error(w, "Berhasil Delete Data", http.StatusOK)
+	}
+
+}
+
 func main() {
 	http.HandleFunc("/AddUsers", HandleAddUsers)
 	http.HandleFunc("/ListUsers", HandleListUsers)
 	http.HandleFunc("/ListUsersById", HandleListUserById)
+	http.HandleFunc("/DeleteUsers", HandleDeleteUsers)
 	fmt.Println("Server mulai di port 8080")
 	http.ListenAndServe(":8080", nil)
 }
